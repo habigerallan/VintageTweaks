@@ -1,8 +1,11 @@
 ﻿using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Server;
+using VintageTweaks.Client;
+using VintageTweaks.Config;
+using VintageTweaks.Server;
 
-namespace VintageTweaks
+namespace VintageTweaks.System
 {
     public sealed class VintageTweaksModSystem : ModSystem
     {

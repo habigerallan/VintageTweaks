@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Server;
+using VintageTweaks.Classes;
+using VintageTweaks.Config;
 
-namespace VintageTweaks
+namespace VintageTweaks.Sort
 {
     internal class VintageTweaksSort : IDisposable
     {

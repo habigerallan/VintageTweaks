@@ -1,6 +1,6 @@
 ﻿using ProtoBuf;
 
-namespace VintageTweaks
+namespace VintageTweaks.Classes
 {
     [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     public class MiddleClickRequest
@@ -15,5 +15,13 @@ namespace VintageTweaks
             InvId = invId;
             InvClass = invClass;
         }
+    }
+
+    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
+    public class CratePushRequest
+    {
+        public int X;
+        public int Y;
+        public int Z;
     }
 }

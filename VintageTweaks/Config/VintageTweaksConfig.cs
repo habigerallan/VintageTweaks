@@ -1,6 +1,6 @@
 ﻿using Vintagestory.API.Client;
 
-namespace VintageTweaks
+namespace VintageTweaks.Config
 {
     public sealed class VintageTweaksConfig
     {
@@ -11,5 +11,8 @@ namespace VintageTweaks
         public int ZoomPercent = 80;
         public float ZoomSpeed = 0.2F;
         public GlKeys ZoomKey = GlKeys.Z;
+
+        public bool AllowCratePush = true;
+        public int CratePushDelayMs = 300;
     }
 }
