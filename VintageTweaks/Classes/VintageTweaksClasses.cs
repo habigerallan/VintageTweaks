@@ -1,4 +1,5 @@
 ﻿using ProtoBuf;
+using Vintagestory.API.Common;
 
 namespace VintageTweaks.Classes
 {
@@ -23,5 +24,6 @@ namespace VintageTweaks.Classes
         public int X;
         public int Y;
         public int Z;
+        public string ItemCode;
     }
 }
