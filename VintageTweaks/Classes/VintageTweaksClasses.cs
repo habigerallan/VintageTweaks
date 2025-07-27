@@ -1,5 +1,6 @@
 ﻿using ProtoBuf;
 using Vintagestory.API.Common;
+using Vintagestory.API.MathTools;
 
 namespace VintageTweaks.Classes
 {
@@ -8,22 +9,21 @@ namespace VintageTweaks.Classes
     {
         public string InvId;
         public string InvClass;
-
-        public MiddleClickRequest() { }
-
-        public MiddleClickRequest(string invId, string invClass)
-        {
-            InvId = invId;
-            InvClass = invClass;
-        }
     }
 
     [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
-    public class CratePushRequest
+    public class CrateRequest
     {
         public int X;
         public int Y;
         public int Z;
         public string ItemCode;
+    }
+    public class CrateClickObject
+    {
+        public BlockPos ClickPos;
+        public long ClickTime;
+        public CollectibleObject ClickItem;
+        public bool ClickComplete;
     }
 }

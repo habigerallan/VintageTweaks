@@ -3,180 +3,121 @@ using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
-using VintageTweaks.Config;
+using Vintagestory.GameContent;
+using Vintagestory.Server;
 using VintageTweaks.Classes;
+using VintageTweaks.Config;
 
 namespace VintageTweaks.Crate
 {
     internal class VintageTweaksCrate : IDisposable
     {
+        private readonly string _channelName = "vintagetweakscrate";
+
         private readonly ICoreClientAPI _capi;
         private readonly ICoreServerAPI _sapi;
         private readonly VintageTweaksConfig _cfg;
 
-        private BlockPos _lastPos;
-        private long _lastClickTime;
-        private CollectibleObject _lastItem;
+        private CrateClickObject _pushObject;
 
-        private BlockPos _currentPos;
-        private long _currentClickTime;
-        private CollectibleObject _currentItem;
-
-        private bool _clicked;
-
-        public VintageTweaksCrate(ICoreClientAPI capi, VintageTweaksConfig cfg)
+        public static void ResetClick(CrateClickObject clickObject)
         {
-            _capi = capi;
-            _cfg = cfg;
-            _capi.Event.MouseDown += OnMouseDown;
-            _capi.Event.MouseUp += OnMouseUp;
-            _capi.Network.RegisterChannel("vintagetweakscrate")
-                .RegisterMessageType<CratePushRequest>();
-
-            _lastPos = null;
-            _lastClickTime = 0;
-            _lastItem = null;
-
-            _currentPos = null;
-            _currentClickTime = 0;
-            _currentItem = null;
-
-            _clicked = false;
+            clickObject.ClickTime = 0;
+            clickObject.ClickPos = null;
+            clickObject.ClickItem = null;
+            clickObject.ClickComplete = false;
         }
 
-        public VintageTweaksCrate(ICoreServerAPI sapi, VintageTweaksConfig cfg)
+        public bool IsPushSuccessful(CrateClickObject pushObject, BlockPos clickPos, long clickTime, CollectibleObject clickItem)
         {
-            _sapi = sapi;
-            _cfg = cfg;
-            _sapi.Network.RegisterChannel("vintagetweakscrate")
-                .RegisterMessageType<CratePushRequest>()
-                .SetMessageHandler<CratePushRequest>(OnCratePushRequest);
+            return pushObject.ClickPos == clickPos
+                && pushObject.ClickItem == clickItem
+                && pushObject.ClickTime - clickTime <= _cfg.CratePushDelayMs
+                && pushObject.ClickComplete;
         }
 
-        private void OnMouseDown(MouseEvent e)
+        public bool IsKeyDown(GlKeys glkey)
         {
-            if (!_cfg.AllowCratePush) return;
-            if (e.Button != EnumMouseButton.Right) return;
+            bool[] keyboard = _capi.Input.KeyboardKeyState;
+            return keyboard[(int)glkey]; ;
+        }
 
-            var kb = _capi.Input.KeyboardKeyState;
-            bool shift = kb[(int)GlKeys.ShiftLeft] || kb[(int)GlKeys.ShiftRight];
-            if (!shift) 
+        public BlockPos GetHoveredBlockPos()
+        {
+            BlockSelection hovered = _capi.World.Player.CurrentBlockSelection;
+            if (hovered != null)
             {
-                _lastPos = null;
-                _lastItem = null;
-                _lastClickTime = 0;
-                _clicked = false;
-                return;
+                return hovered.Position;
             }
 
-            var sel = _capi.World.Player.CurrentBlockSelection;
-            if (sel == null) return;
+            return null;   
+        }
 
-            _currentPos = sel.Position;
-            var be = _capi.World.BlockAccessor.GetBlockEntity(_currentPos);
-            if (be == null) return;
+        public InventoryBase InventoryFromBlockPos(BlockPos blockPos)
+        {
+            var block = _capi != null
+                ? _capi.World.BlockAccessor.GetBlockEntity(blockPos)
+                : _sapi.World.BlockAccessor.GetBlockEntity(blockPos);
 
-            var invProp = be.GetType().GetProperty("Inventory");
-            if (invProp?.GetValue(be) is not InventoryBase crateInv) return;
-            if (crateInv.Count == 0 || crateInv.Empty) return;
-
-            bool hasMatch = false;
-            _currentItem = crateInv.FirstNonEmptySlot.Itemstack.Collectible;
-            foreach (var layer in new[] { "hotbar", "backpack" })
+            if (block != null)
             {
-                var inv = _capi.World.Player.InventoryManager.GetOwnInventory(layer);
-                if (inv == null) continue;
-                foreach (var slot in inv)
+                var inventory = block.GetType().GetProperty("Inventory");
+
+                if (block != null)
                 {
-                    if (!slot.Empty && slot.Itemstack.Collectible == _currentItem)
-                    {
-                        hasMatch = true;
-                        break;
-                    }
+                    return (InventoryBase)inventory.GetValue(block);
                 }
-                if (hasMatch) break;
             }
-            if (!hasMatch) return;
 
-            _currentClickTime = _capi.World.ElapsedMilliseconds;
-            if (_lastPos != null 
-                && _lastPos.Equals(_currentPos) 
-                && _lastItem == _currentItem
-                && _currentClickTime - _lastClickTime < _cfg.CratePushDelayMs
-                && _clicked)
-            {
-                _capi.Network.GetChannel("vintagetweakscrate")
-                    .SendPacket(new CratePushRequest { X = _currentPos.X, Y = _currentPos.Y, Z = _currentPos.Z, ItemCode = _currentItem.Code });
-
-                _lastPos = null;
-                _lastItem = null;
-                _lastClickTime = 0;
-                _clicked = false;
-            }
-            else
-            {
-                _lastPos = _currentPos;
-                _lastItem = _currentItem;
-                _lastClickTime = _currentClickTime;
-                _clicked = false;
-            }
+            return null;
         }
 
-        private void OnMouseUp(MouseEvent e)
+        public bool PlayerContainsCrateItem(CollectibleObject collectibleObject)
         {
-            if (!_cfg.AllowCratePush) return;
-            if (e.Button != EnumMouseButton.Right) return;
+            string[] inventoryLayers = { "hotbar", "backpack" };
+            var invManager = _capi.World.Player.InventoryManager;
 
-            var kb = _capi.Input.KeyboardKeyState;
-            bool shift = kb[(int)GlKeys.ShiftLeft] || kb[(int)GlKeys.ShiftRight];
-            if (!shift) return;
-
-            _clicked = true;
-        }
-
-
-        private void OnCratePushRequest(IServerPlayer player, CratePushRequest msg)
-        {
-            if (!_cfg.AllowCratePush) return;
-
-            var pos = new BlockPos(msg.X, msg.Y, msg.Z);
-            var be = _sapi.World.BlockAccessor.GetBlockEntity(pos);
-            if (be == null) return;
-
-            var invProp = be.GetType().GetProperty("Inventory");
-            if (invProp?.GetValue(be) is not InventoryBase crateInv) return;
-
-            CollectibleObject serverSideItem = crateInv.FirstNonEmptySlot.Itemstack.Collectible;
-            string serverItemCode = serverSideItem.Code;
-            if (serverItemCode != msg.ItemCode) return;
-
-            IInventory hotbar = player.InventoryManager.GetOwnInventory("hotbar");
-            IInventory backpack = player.InventoryManager.GetOwnInventory("backpack");
-
-            int totalCrateSlots = crateInv.Count;
-            CollectibleObject crateType = crateInv.Empty
-                ? null
-                : crateInv.FirstNonEmptySlot.Itemstack.Collectible;
-
-            foreach (var playerInv in new[] { hotbar, backpack })
+            foreach (var layer in inventoryLayers)
             {
-                if (playerInv == null) continue;
+                var inventory = invManager.GetOwnInventory(layer);
+                if (inventory == null) continue;
 
-                int firstSlot = playerInv.ClassName == "backpack"
-                    ? _cfg.BackpackSlots
-                    : 0;
-
-                for (int slotId = firstSlot; slotId < playerInv.Count; slotId++)
+                foreach (var slot in inventory)
                 {
-                    var slot = playerInv[slotId];
+                    if (slot.Empty) continue;
+                    if (slot.Itemstack.Collectible == collectibleObject) return true;
+                }
+            }
+
+            return false;
+        }
+
+        public void PushItemsToCrate(IServerPlayer player, CollectibleObject item, InventoryBase crateInv)
+        {
+            string[] inventoryLayers = { "hotbar", "backpack" };
+            var invManager = player.InventoryManager;
+            int totalCrateSlots = crateInv.Count;
+
+            foreach (var layer in inventoryLayers)
+            {
+                var inventory = invManager.GetOwnInventory(layer);
+                if (inventory == null) continue;
+
+                int start = 0;
+                if (layer == "backpack")
+                {
+                    start = _cfg.BackpackSlots;
+                }
+
+                for (int slotId = start; slotId < inventory.Count; slotId++)
+                {
+                    var slot = inventory[slotId];
                     if (slot.Empty) continue;
 
                     var stack = slot.Itemstack;
-
-                    if (crateType != null && stack.Collectible != crateType) continue;
+                    if (stack.Collectible != item) continue;
 
                     int toMove = slot.StackSize;
-
                     for (int ci = 0; ci < totalCrateSlots && toMove > 0; ci++)
                     {
                         var cslot = crateInv[ci];
@@ -189,14 +130,115 @@ namespace VintageTweaks.Crate
                     }
                 }
             }
+        }
 
-            be.MarkDirty();
+        public VintageTweaksCrate(ICoreClientAPI capi, VintageTweaksConfig cfg)
+        {
+            _capi = capi;
+            _cfg = cfg;
+            _capi.Event.MouseDown += CratePushDown;
+            _capi.Event.MouseUp += CratePushUp;
+            _capi.Network.RegisterChannel(_channelName)
+                .RegisterMessageType<CrateRequest>();
+
+            _pushObject = new CrateClickObject();
+        }
+
+        public VintageTweaksCrate(ICoreServerAPI sapi, VintageTweaksConfig cfg)
+        {
+            _sapi = sapi;
+            _cfg = cfg;
+            _sapi.Network.RegisterChannel(_channelName)
+                .RegisterMessageType<CrateRequest>()
+                .SetMessageHandler<CrateRequest>(OnCratePushRequest);
+        }
+
+        private void CratePushDown(MouseEvent e)
+        {
+            if (!_cfg.AllowCratePush) return;
+            if (e.Button != EnumMouseButton.Right) return;
+
+            if (!IsKeyDown(GlKeys.ShiftLeft)) 
+            {
+                ResetClick(_pushObject);
+                return;
+            }
+
+            BlockPos currentPos = GetHoveredBlockPos();
+            if (currentPos == null)
+            {
+                ResetClick(_pushObject);
+                return;
+            }
+
+            InventoryBase crateInv = InventoryFromBlockPos(currentPos);
+            if (crateInv == null 
+                || crateInv.ClassName != "crate"
+                || crateInv.Count == 0 
+                || crateInv.Empty)
+            {
+                ResetClick(_pushObject);
+                return;
+            }
+
+            CollectibleObject currentItem = crateInv.FirstNonEmptySlot.Itemstack.Collectible;
+            if (!PlayerContainsCrateItem(currentItem))
+            {
+                ResetClick(_pushObject);
+                return;
+            }
+
+            // fuck you bitch ass code, delay between clicks not working
+            long currentClickTime = _capi.World.ElapsedMilliseconds;
+            if (IsPushSuccessful(_pushObject, currentPos, currentClickTime, currentItem))
+            {
+                _capi.Network.GetChannel(_channelName)
+                    .SendPacket(new CrateRequest { X = currentPos.X, Y = currentPos.Y, Z = currentPos.Z, ItemCode = currentItem.Code });
+                
+                ResetClick(_pushObject);
+            }
+            else
+            {
+                _pushObject.ClickTime = currentClickTime;
+                _pushObject.ClickItem = currentItem;
+                _pushObject.ClickPos = currentPos;
+            }
+        }
+
+        private void CratePushUp(MouseEvent e)
+        {
+            if (!_cfg.AllowCratePush) return;
+            if (e.Button != EnumMouseButton.Right) return;
+
+            if (!IsKeyDown(GlKeys.ShiftLeft))
+            {
+                ResetClick(_pushObject);
+                return;
+            }
+
+            _pushObject.ClickComplete = true;
+        }
+
+        private void OnCratePushRequest(IServerPlayer player, CrateRequest msg)
+        {
+            if (!_cfg.AllowCratePush) return;
+
+            var blockPos = new BlockPos(msg.X, msg.Y, msg.Z);
+            InventoryBase crateInv = InventoryFromBlockPos(blockPos);
+
+            if (crateInv == null || crateInv.ClassName != "crate") return;
+ 
+            CollectibleObject serverSideItem = crateInv.FirstNonEmptySlot.Itemstack.Collectible;
+            string serverItemCode = serverSideItem.Code;
+            if (serverItemCode != msg.ItemCode) return;
+
+            PushItemsToCrate(player, serverSideItem, crateInv);
         }
 
         public void Dispose()
         {
-            _capi.Event.MouseDown -= OnMouseDown;
-            _capi.Event.MouseUp -= OnMouseUp;
+            _capi.Event.MouseDown -= CratePushDown;
+            _capi.Event.MouseUp -= CratePushUp;
         }
     }
 }
