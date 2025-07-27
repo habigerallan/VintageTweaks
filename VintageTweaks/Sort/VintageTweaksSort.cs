@@ -96,7 +96,7 @@ namespace VintageTweaks.Sort
             }
 
             _capi.Network.GetChannel("vintagetweaks")
-                 .SendPacket(new MiddleClickRequest { InvId = inv.InventoryID, InvClass = inv.ClassName });
+                 .SendPacket(new MiddleClickRequest(inv.InventoryID, inv.ClassName));
         }
 
         public void Dispose()

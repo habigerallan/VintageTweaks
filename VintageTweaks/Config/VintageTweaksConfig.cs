@@ -13,6 +13,7 @@ namespace VintageTweaks.Config
         public GlKeys ZoomKey = GlKeys.Z;
 
         public bool AllowCratePush = true;
-        public int CratePushDelayMs = 300;
+        public bool AllowCratePull = true;
+        public int CrateDelayMs = 300;
     }
 }
