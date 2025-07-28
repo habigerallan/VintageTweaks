@@ -1,8 +1,9 @@
 ﻿using System;
 using Vintagestory.API.Client;
 using Vintagestory.API.MathTools;
+using VintageTweaks.Config;
 
-namespace VintageTweaks
+namespace VintageTweaks.Zoom
 {
     internal class VintageTweaksZoom : IDisposable
     {

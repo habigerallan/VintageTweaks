@@ -3,11 +3,15 @@ using System.Collections.Generic;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Server;
+using VintageTweaks.Classes;
+using VintageTweaks.Config;
 
-namespace VintageTweaks
+namespace VintageTweaks.Sort
 {
     internal class VintageTweaksSort : IDisposable
     {
+        private readonly string _sortChannelName = "vintagetweaks_sort";
+
         private readonly ICoreClientAPI _capi;
         private readonly VintageTweaksConfig _cfg;
 
@@ -20,7 +24,7 @@ namespace VintageTweaks
 
             _capi.Event.MouseDown += OnMouseDown;
 
-            capi.Network.RegisterChannel("vintagetweaks")
+            capi.Network.RegisterChannel(_sortChannelName)
                 .RegisterMessageType<MiddleClickRequest>();
         }
 
@@ -28,7 +32,7 @@ namespace VintageTweaks
         {
             _cfg = cfg;
 
-            sapi.Network.RegisterChannel("vintagetweaks")
+            sapi.Network.RegisterChannel(_sortChannelName)
                 .RegisterMessageType<MiddleClickRequest>()
                 .SetMessageHandler<MiddleClickRequest>(HandlePacket);
         }
