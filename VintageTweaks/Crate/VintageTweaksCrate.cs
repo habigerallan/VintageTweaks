@@ -12,8 +12,8 @@ namespace VintageTweaks.Crate
 {
     internal class VintageTweaksCrate : IDisposable
     {
-        private readonly string _pushChannelName = "vintagetweaks_cratepush";
-        private readonly string _pullChannelName = "vintagetweaks_cratepull";
+        private readonly string _pushChannelName = "vintagetweaks_crate_push";
+        private readonly string _pullChannelName = "vintagetweaks_crate_pull";
 
         private readonly ICoreClientAPI _capi;
         private readonly ICoreServerAPI _sapi;
