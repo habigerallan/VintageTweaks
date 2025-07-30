@@ -26,8 +26,6 @@ namespace VintageTweaks.Sort
 
             _capi.Network.RegisterChannel(_sortChannelName)
                 .RegisterMessageType<MiddleClickRequest>();
-
-            _itemsToBeSorted = new List<ItemStack>();
         }
 
         public VintageTweaksSort(ICoreServerAPI sapi, VintageTweaksConfig cfg)
@@ -37,6 +35,8 @@ namespace VintageTweaks.Sort
             sapi.Network.RegisterChannel(_sortChannelName)
                 .RegisterMessageType<MiddleClickRequest>()
                 .SetMessageHandler<MiddleClickRequest>(OnMiddleClickRequest);
+
+            _itemsToBeSorted = new List<ItemStack>();
         }
 
         public void OnMiddleClickRequest(IServerPlayer player, MiddleClickRequest msg)
