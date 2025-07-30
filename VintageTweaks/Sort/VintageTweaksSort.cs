@@ -15,17 +15,19 @@ namespace VintageTweaks.Sort
         private readonly ICoreClientAPI _capi;
         private readonly VintageTweaksConfig _cfg;
 
-        private readonly List<ItemStack> _buffer = new();
+        private readonly List<ItemStack> _itemsToBeSorted;
 
         public VintageTweaksSort(ICoreClientAPI capi, VintageTweaksConfig cfg)
         {
             _capi = capi;
             _cfg = cfg;
 
-            _capi.Event.MouseDown += OnMouseDown;
+            _capi.Event.MouseDown += SortDown;
 
-            capi.Network.RegisterChannel(_sortChannelName)
+            _capi.Network.RegisterChannel(_sortChannelName)
                 .RegisterMessageType<MiddleClickRequest>();
+
+            _itemsToBeSorted = new List<ItemStack>();
         }
 
         public VintageTweaksSort(ICoreServerAPI sapi, VintageTweaksConfig cfg)
@@ -34,15 +36,15 @@ namespace VintageTweaks.Sort
 
             sapi.Network.RegisterChannel(_sortChannelName)
                 .RegisterMessageType<MiddleClickRequest>()
-                .SetMessageHandler<MiddleClickRequest>(HandlePacket);
+                .SetMessageHandler<MiddleClickRequest>(OnMiddleClickRequest);
         }
 
-        public void HandlePacket(IServerPlayer player, MiddleClickRequest msg)
+        public void OnMiddleClickRequest(IServerPlayer player, MiddleClickRequest msg)
         {
             IInventory inv = player.InventoryManager.GetInventory(msg.InvId);
             if (inv == null) return;
 
-            _buffer.Clear();
+            _itemsToBeSorted.Clear();
             int firstSlot = msg.InvClass == "backpack" ? _cfg.BackpackSlots : 0;
 
             for (int i = firstSlot; i < inv.Count; i++)
@@ -50,27 +52,27 @@ namespace VintageTweaks.Sort
                 ItemSlot slot = inv[i];
                 if (slot.Empty) continue;
 
-                _buffer.Add(slot.TakeOutWhole());
+                _itemsToBeSorted.Add(slot.TakeOutWhole());
             }
-            if (_buffer.Count == 0) return;
+            if (_itemsToBeSorted.Count == 0) return;
 
-            _buffer.Sort((a, b) =>
+            _itemsToBeSorted.Sort((a, b) =>
             {
                 int cmp = a.Collectible.Id - b.Collectible.Id;
                 return cmp != 0 ? cmp : b.StackSize - a.StackSize;
             });
 
             int written = 0;
-            for (int i = firstSlot; i < inv.Count && written < _buffer.Count; i++)
+            for (int i = firstSlot; i < inv.Count && written < _itemsToBeSorted.Count; i++)
             {
                 if (!inv[i].Empty) continue;
 
-                inv[i].Itemstack = _buffer[written++];
+                inv[i].Itemstack = _itemsToBeSorted[written++];
                 inv[i].MarkDirty();
             }
         }
 
-        private void OnMouseDown(MouseEvent e)
+        private void SortDown(MouseEvent e)
         {
             if (e.Button != EnumMouseButton.Middle ||
                 !_cfg.AllowMiddleClickSort)
@@ -97,13 +99,13 @@ namespace VintageTweaks.Sort
                 inv[i].MarkDirty();
             }
 
-            _capi.Network.GetChannel("vintagetweaks")
+            _capi.Network.GetChannel(_sortChannelName)
                  .SendPacket(new MiddleClickRequest(inv.InventoryID, inv.ClassName));
         }
 
         public void Dispose()
         {
-            _capi.Event.MouseDown -= OnMouseDown;
+            _capi.Event.MouseDown -= SortDown;
         }
     }
 }
