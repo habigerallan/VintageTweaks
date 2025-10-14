@@ -103,7 +103,7 @@ namespace VintageTweaks.Code.Features.Server
             return serverSideItem;
         }
 
-        private InventoryBase GetInventory(IServerPlayer player, Network.CrateRequest msg)
+        private InventoryBase GetInventory(Network.CrateRequest msg)
         {
             BlockPos blockPos = new(msg.X, msg.Y, msg.Z);
             InventoryBase crateInv = Shared.Functions.InventoryFromBlockPos(_sapi, blockPos);
@@ -116,7 +116,7 @@ namespace VintageTweaks.Code.Features.Server
         {
             if (!_cfg.AllowCratePush) return;
 
-            InventoryBase crateInv = GetInventory(player, msg);
+            InventoryBase crateInv = GetInventory(msg);
             if (crateInv == null) return;
 
             CollectibleObject serverSideItem = GetItem(crateInv, msg);
@@ -129,7 +129,7 @@ namespace VintageTweaks.Code.Features.Server
         {
             if (!_cfg.AllowCratePull) return;
 
-            InventoryBase crateInv = GetInventory(player, msg);
+            InventoryBase crateInv = GetInventory(msg);
             if (crateInv == null) return;
 
             if (GetItem(crateInv, msg) == null) return;

@@ -66,7 +66,7 @@ namespace VintageTweaks.Code.Features.Client
 
         private bool PlayerContainsCrateItem(CollectibleObject collectibleObject)
         {
-            string[] inventoryLayers = { "hotbar", "backpack" };
+            string[] inventoryLayers = ["hotbar", "backpack"];
             IPlayerInventoryManager invManager = _capi.World.Player.InventoryManager;
 
             foreach (string layer in inventoryLayers)
