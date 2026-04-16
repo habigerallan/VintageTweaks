@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
+using Vintagestory.API.Config;
 
 namespace VintageTweaks.src.client;
 
@@ -40,6 +41,19 @@ internal sealed class SweepLeaveItem : IDisposable
         _visitedSlots.Clear();
     }
 
+    private bool CanLeaveIntoSlot(ItemSlot hoveredSlot)
+    {
+        if (hoveredSlot.Empty)
+        {
+            return true;
+        }
+
+        ItemSlot mouseSlot = _capi.World.Player.InventoryManager.MouseItemSlot;
+        return mouseSlot != null
+            && !mouseSlot.Empty
+            && hoveredSlot.Itemstack.Equals(_capi.World, mouseSlot.Itemstack, GlobalConstants.IgnoredStackAttributes);
+    }
+
     private void TryLeaveHoveredSlot()
     {
         if (!TryGetHoveredSlot(out ItemSlot hoveredSlot, out InventoryBase inventory, out int slotId))
@@ -54,7 +68,7 @@ internal sealed class SweepLeaveItem : IDisposable
         }
 
         _lastHoveredSlotKey = slotKey;
-        if (!_visitedSlots.Add(slotKey) || !hoveredSlot.Empty)
+        if (!_visitedSlots.Add(slotKey) || !CanLeaveIntoSlot(hoveredSlot))
         {
             return;
         }

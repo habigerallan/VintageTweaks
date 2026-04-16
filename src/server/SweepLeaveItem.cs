@@ -27,9 +27,23 @@ internal sealed class SweepLeaveItem
             || (inventory.ClassName == GlobalConstants.backpackInvClassName && slotId < _config.BackpackSlots);
     }
 
+    private bool MatchesHeldStack(ItemStack candidate, ItemStack heldStack)
+    {
+        return candidate != null
+            && heldStack != null
+            && candidate.Equals(_sapi.World, heldStack, GlobalConstants.IgnoredStackAttributes);
+    }
+
+    private bool CanLeaveIntoSlot(ItemSlot targetSlot, ItemStack heldStack)
+    {
+        return targetSlot != null
+            && (targetSlot.Empty || MatchesHeldStack(targetSlot.Itemstack, heldStack));
+    }
+
     private bool ValidateTargetSlot(
         IServerPlayer player,
         shared.SweepLeaveItemPayload payload,
+        ItemStack heldStack,
         out ItemSlot targetSlot
     )
     {
@@ -54,7 +68,7 @@ internal sealed class SweepLeaveItem
         }
 
         targetSlot = targetInventory[payload.TargetSlotId];
-        return targetSlot != null && targetSlot.Empty;
+        return CanLeaveIntoSlot(targetSlot, heldStack);
     }
 
     private void OnSweepLeaveRequest(IServerPlayer player, shared.SweepLeaveItemPayload payload)
@@ -70,7 +84,7 @@ internal sealed class SweepLeaveItem
             return;
         }
 
-        if (!ValidateTargetSlot(player, payload, out ItemSlot targetSlot))
+        if (!ValidateTargetSlot(player, payload, mouseSlot.Itemstack, out ItemSlot targetSlot))
         {
             return;
         }
