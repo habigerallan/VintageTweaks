@@ -46,6 +46,8 @@ Tweaks and changes I thought would be nice to see in Vintage Story. All **fully
     *   A **slight zoom** that is meant to imitate squinting, fully **customizable**.
         
 
-**VERSION NOTE:** I always suggest the **latest version** of the mod for your game version unless specified.**COMPATIBILITY NOTE:** If you have a mod that changes the number of backpack slots please change the config's **BackpackSlots** to match.
+**VERSION NOTE:** I always suggest the **latest version** of the mod for your game version unless specified.
+
+**COMPATIBILITY NOTE:** If you have a mod that changes the number of backpack slots please change the config's **BackpackSlots** to match.
 
 _(Hope to have this done automatically in the future)_
