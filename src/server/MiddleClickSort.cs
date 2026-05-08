@@ -27,6 +27,27 @@ internal sealed class MiddleClickSort
         return inventory.ClassName == GlobalConstants.backpackInvClassName ? _config.BackpackSlots : 0;
     }
 
+    private static bool IsSortableSlot(ItemSlot slot)
+    {
+        return slot != null
+            && slot is not ItemSlotOutput
+            && slot is not ItemSlotOffhand;
+    }
+
+    private static void AddSlotToStorageGroup(List<List<ItemSlot>> slotGroups, ItemSlot slot)
+    {
+        foreach (List<ItemSlot> slotGroup in slotGroups)
+        {
+            if (slotGroup[0].StorageType == slot.StorageType)
+            {
+                slotGroup.Add(slot);
+                return;
+            }
+        }
+
+        slotGroups.Add([slot]);
+    }
+
     private void MergeStacks(List<ItemStack> itemsToBeSorted)
     {
         List<ItemStack> mergedStacks = [];
@@ -65,26 +86,51 @@ internal sealed class MiddleClickSort
         itemsToBeSorted.AddRange(mergedStacks);
     }
 
-    private void OnSortRequest(IServerPlayer player, shared.MiddleClickSortPayload payload)
+    private static void RestoreSlots(List<ItemSlot> slots, List<ItemStack> originalStacks)
     {
-        IInventory inventory = player.InventoryManager.GetInventory(payload.InventoryId);
-        if (inventory == null)
+        for (int slotIndex = 0; slotIndex < slots.Count; slotIndex++)
         {
-            return;
+            slots[slotIndex].Itemstack = originalStacks[slotIndex]?.Clone();
+            slots[slotIndex].MarkDirty();
         }
+    }
 
-        List<ItemStack> itemsToBeSorted = [];
-
-        int firstSortableSlot = GetFirstSortableSlot(inventory);
-        for (int slotIndex = firstSortableSlot; slotIndex < inventory.Count; slotIndex++)
+    private bool TryPlaceSortedStacks(List<ItemStack> sortedStacks, List<ItemSlot> targetSlots)
+    {
+        foreach (ItemStack stack in sortedStacks)
         {
-            ItemSlot slot = inventory[slotIndex];
-            if (slot.Empty)
+            DummySlot sourceSlot = new(stack);
+            foreach (ItemSlot targetSlot in targetSlots)
             {
-                continue;
+                if (sourceSlot.Empty)
+                {
+                    break;
+                }
+
+                ItemMoveRules.TryPutInto(_sapi.World, sourceSlot, targetSlot, sourceSlot.StackSize);
             }
 
-            itemsToBeSorted.Add(slot.TakeOutWhole());
+            if (!sourceSlot.Empty)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private void SortSlotGroup(List<ItemSlot> sortableSlots)
+    {
+        List<ItemStack> itemsToBeSorted = [];
+        List<ItemStack> originalStacks = [];
+
+        foreach (ItemSlot slot in sortableSlots)
+        {
+            originalStacks.Add(slot.Empty ? null : slot.Itemstack.Clone());
+            if (!slot.Empty)
+            {
+                itemsToBeSorted.Add(slot.TakeOutWhole());
+            }
         }
 
         if (itemsToBeSorted.Count == 0)
@@ -100,11 +146,37 @@ internal sealed class MiddleClickSort
             return collectibleComparison != 0 ? collectibleComparison : right.StackSize - left.StackSize;
         });
 
-        int nextSortedStack = 0;
-        for (int slotIndex = firstSortableSlot; slotIndex < inventory.Count && nextSortedStack < itemsToBeSorted.Count; slotIndex++)
+        if (!TryPlaceSortedStacks(itemsToBeSorted, sortableSlots))
         {
-            inventory[slotIndex].Itemstack = itemsToBeSorted[nextSortedStack++];
-            inventory[slotIndex].MarkDirty();
+            RestoreSlots(sortableSlots, originalStacks);
+        }
+    }
+
+    private void OnSortRequest(IServerPlayer player, shared.MiddleClickSortPayload payload)
+    {
+        IInventory inventory = player.InventoryManager.GetInventory(payload.InventoryId);
+        if (inventory == null)
+        {
+            return;
+        }
+
+        List<List<ItemSlot>> slotGroups = [];
+
+        int firstSortableSlot = GetFirstSortableSlot(inventory);
+        for (int slotIndex = firstSortableSlot; slotIndex < inventory.Count; slotIndex++)
+        {
+            ItemSlot slot = inventory[slotIndex];
+            if (!IsSortableSlot(slot) || (!slot.Empty && !slot.CanTake()))
+            {
+                continue;
+            }
+
+            AddSlotToStorageGroup(slotGroups, slot);
+        }
+
+        foreach (List<ItemSlot> slotGroup in slotGroups)
+        {
+            SortSlotGroup(slotGroup);
         }
     }
 }

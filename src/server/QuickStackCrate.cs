@@ -71,7 +71,7 @@ internal sealed class QuickStackCrate
             for (int slotIndex = firstAvailableSlot; slotIndex < playerInventory.Count; slotIndex++)
             {
                 ItemSlot playerSlot = playerInventory[slotIndex];
-                if (playerSlot.Empty || playerSlot.Itemstack.Collectible != itemToMatch)
+                if (playerSlot == null || playerSlot.Empty || !playerSlot.CanTake() || playerSlot.Itemstack.Collectible != itemToMatch)
                 {
                     continue;
                 }
@@ -80,12 +80,12 @@ internal sealed class QuickStackCrate
                 for (int crateSlotIndex = 0; crateSlotIndex < crateInventory.Count && itemsToMove > 0; crateSlotIndex++)
                 {
                     ItemSlot crateSlot = crateInventory[crateSlotIndex];
-                    if (!crateSlot.Empty && crateSlot.Itemstack.Collectible != itemToMatch)
+                    if (crateSlot == null || (!crateSlot.Empty && crateSlot.Itemstack.Collectible != itemToMatch))
                     {
                         continue;
                     }
 
-                    itemsToMove -= playerSlot.TryPutInto(_sapi.World, crateSlot, itemsToMove);
+                    itemsToMove -= ItemMoveRules.TryPutInto(_sapi.World, playerSlot, crateSlot, itemsToMove);
                 }
             }
         }
@@ -107,7 +107,7 @@ internal sealed class QuickStackCrate
             for (int crateSlotIndex = 0; crateSlotIndex < crateInventory.Count; crateSlotIndex++)
             {
                 ItemSlot crateSlot = crateInventory[crateSlotIndex];
-                if (crateSlot.Empty)
+                if (crateSlot == null || crateSlot.Empty || !crateSlot.CanTake())
                 {
                     continue;
                 }
@@ -116,12 +116,12 @@ internal sealed class QuickStackCrate
                 for (int slotIndex = firstAvailableSlot; slotIndex < playerInventory.Count && itemsToMove > 0; slotIndex++)
                 {
                     ItemSlot playerSlot = playerInventory[slotIndex];
-                    if (!playerSlot.Empty && playerSlot.Itemstack.Collectible != crateSlot.Itemstack.Collectible)
+                    if (playerSlot == null || (!playerSlot.Empty && playerSlot.Itemstack.Collectible != crateSlot.Itemstack.Collectible))
                     {
                         continue;
                     }
 
-                    itemsToMove -= crateSlot.TryPutInto(_sapi.World, playerSlot, itemsToMove);
+                    itemsToMove -= ItemMoveRules.TryPutInto(_sapi.World, crateSlot, playerSlot, itemsToMove);
                 }
             }
         }

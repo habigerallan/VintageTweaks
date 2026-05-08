@@ -93,7 +93,8 @@ internal sealed class QuickMoveItem
     private bool ValidateSourceSlot(InventoryBase sourceInventory, int slotId, ItemStack requestedStack)
     {
         ItemSlot sourceSlot = sourceInventory[slotId];
-        return sourceSlot.Empty || MatchesRequestedStack(sourceSlot.Itemstack, requestedStack);
+        return sourceSlot != null
+            && (sourceSlot.Empty || (sourceSlot.CanTake() && MatchesRequestedStack(sourceSlot.Itemstack, requestedStack)));
     }
 
     private int GetFirstUsableSlot(IInventory inventory)
@@ -112,7 +113,7 @@ internal sealed class QuickMoveItem
         for (int slotIndex = firstSlot; slotIndex < inventory.Count; slotIndex++)
         {
             ItemSlot slot = inventory[slotIndex];
-            if (slot.Empty || !MatchesRequestedStack(slot.Itemstack, requestedStack))
+            if (slot.Empty || !slot.CanTake() || !MatchesRequestedStack(slot.Itemstack, requestedStack))
             {
                 continue;
             }
@@ -132,7 +133,7 @@ internal sealed class QuickMoveItem
         for (int slotIndex = firstSourceSlot; slotIndex < sourceInventory.Count; slotIndex++)
         {
             ItemSlot sourceSlot = sourceInventory[slotIndex];
-            if (sourceSlot.Empty || !MatchesRequestedStack(sourceSlot.Itemstack, requestedStack))
+            if (sourceSlot.Empty || !sourceSlot.CanTake() || !MatchesRequestedStack(sourceSlot.Itemstack, requestedStack))
             {
                 continue;
             }
@@ -158,7 +159,7 @@ internal sealed class QuickMoveItem
         for (int slotIndex = firstTargetSlot; slotIndex < targetInventory.Count && !sourceSlot.Empty; slotIndex++)
         {
             ItemSlot targetSlot = targetInventory[slotIndex];
-            if (targetSlot.Empty != allowEmptyTargets)
+            if (targetSlot == null || targetSlot.Empty != allowEmptyTargets)
             {
                 continue;
             }
@@ -168,7 +169,7 @@ internal sealed class QuickMoveItem
                 continue;
             }
 
-            sourceSlot.TryPutInto(_sapi.World, targetSlot, sourceSlot.StackSize);
+            ItemMoveRules.TryPutInto(_sapi.World, sourceSlot, targetSlot, sourceSlot.StackSize);
         }
     }
 
@@ -211,7 +212,7 @@ internal sealed class QuickMoveItem
 
     private void TryTransferAway(IServerPlayer player, ItemSlot sourceSlot)
     {
-        while (!sourceSlot.Empty)
+        while (!sourceSlot.Empty && sourceSlot.CanTake())
         {
             int previousStackSize = sourceSlot.StackSize;
             ItemStackMoveOperation moveOperation = new(

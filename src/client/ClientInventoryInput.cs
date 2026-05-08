@@ -41,6 +41,12 @@ internal static class ClientInventoryInput
             && (inventory.ClassName != GlobalConstants.backpackInvClassName || slotId >= backpackSlots);
     }
 
+    public static bool IsCraftingOutputSlot(ItemSlot slot, InventoryBase inventory)
+    {
+        return slot is ItemSlotOutput
+            && inventory?.ClassName == GlobalConstants.craftingInvClassName;
+    }
+
     public static string GetSlotKey(InventoryBase inventory, int slotId)
     {
         return $"{inventory.InventoryID}:{slotId}";

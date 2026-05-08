@@ -34,16 +34,17 @@ internal sealed class SweepLeaveItem
             && candidate.Equals(_sapi.World, heldStack, GlobalConstants.IgnoredStackAttributes);
     }
 
-    private bool CanLeaveIntoSlot(ItemSlot targetSlot, ItemStack heldStack)
+    private bool CanLeaveIntoSlot(ItemSlot sourceSlot, ItemSlot targetSlot)
     {
         return targetSlot != null
-            && (targetSlot.Empty || MatchesHeldStack(targetSlot.Itemstack, heldStack));
+            && (targetSlot.Empty || MatchesHeldStack(targetSlot.Itemstack, sourceSlot.Itemstack))
+            && ItemMoveRules.CanMoveInto(sourceSlot, targetSlot);
     }
 
     private bool ValidateTargetSlot(
         IServerPlayer player,
         shared.SweepLeaveItemPayload payload,
-        ItemStack heldStack,
+        ItemSlot sourceSlot,
         out ItemSlot targetSlot
     )
     {
@@ -68,7 +69,7 @@ internal sealed class SweepLeaveItem
         }
 
         targetSlot = targetInventory[payload.TargetSlotId];
-        return CanLeaveIntoSlot(targetSlot, heldStack);
+        return CanLeaveIntoSlot(sourceSlot, targetSlot);
     }
 
     private void OnSweepLeaveRequest(IServerPlayer player, shared.SweepLeaveItemPayload payload)
@@ -84,11 +85,11 @@ internal sealed class SweepLeaveItem
             return;
         }
 
-        if (!ValidateTargetSlot(player, payload, mouseSlot.Itemstack, out ItemSlot targetSlot))
+        if (!ValidateTargetSlot(player, payload, mouseSlot, out ItemSlot targetSlot))
         {
             return;
         }
 
-        mouseSlot.TryPutInto(_sapi.World, targetSlot, 1);
+        ItemMoveRules.TryPutInto(_sapi.World, mouseSlot, targetSlot, 1);
     }
 }

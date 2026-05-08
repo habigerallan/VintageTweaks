@@ -24,12 +24,17 @@ internal sealed class MiddleClickSort : IDisposable
 
     private void OnMouseDown(MouseEvent mouseEvent)
     {
-        if (mouseEvent.Button != EnumMouseButton.Middle || !_config.AllowMiddleClickSort)
+        if (mouseEvent.Handled || mouseEvent.Button != EnumMouseButton.Middle || !_config.AllowMiddleClickSort)
         {
             return;
         }
 
         if (!ClientInventoryInput.TryGetHoveredSlot(_capi, _config.BackpackSlots, out ItemSlot hoveredSlot, out InventoryBase inventory, out _))
+        {
+            return;
+        }
+
+        if (ClientInventoryInput.IsCraftingOutputSlot(hoveredSlot, inventory))
         {
             return;
         }

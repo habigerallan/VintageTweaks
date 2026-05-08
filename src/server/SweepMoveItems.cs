@@ -89,12 +89,13 @@ internal sealed class SweepMoveItems
         sourceSlot = sourceInventory[payload.SourceSlotId];
         return sourceSlot != null
             && !sourceSlot.Empty
+            && sourceSlot.CanTake()
             && MatchesRequestedStack(sourceSlot.Itemstack, requestedStack);
     }
 
     private void TryTransferAway(IServerPlayer player, ItemSlot sourceSlot, ItemStack requestedStack)
     {
-        while (!sourceSlot.Empty && MatchesRequestedStack(sourceSlot.Itemstack, requestedStack))
+        while (!sourceSlot.Empty && sourceSlot.CanTake() && MatchesRequestedStack(sourceSlot.Itemstack, requestedStack))
         {
             int previousStackSize = sourceSlot.StackSize;
             ItemStackMoveOperation moveOperation = new(

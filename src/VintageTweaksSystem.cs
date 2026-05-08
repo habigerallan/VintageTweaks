@@ -8,7 +8,9 @@ public sealed class VintageTweaksSystem : ModSystem
 {
     public sealed class ModConfig
     {
+        public ClearHandsConfig ClearHands = new();
         public CrateConfig Crate = new();
+        public MiddleClickClearConfig MiddleClickClear = new();
         public QuickMoveConfig QuickMove = new();
         public SortConfig Sort = new();
         public SweepLeaveConfig SweepLeave = new();
@@ -18,7 +20,9 @@ public sealed class VintageTweaksSystem : ModSystem
 
         public void EnsureDefaults()
         {
+            ClearHands ??= new ClearHandsConfig();
             Crate ??= new CrateConfig();
+            MiddleClickClear ??= new MiddleClickClearConfig();
             QuickMove ??= new QuickMoveConfig();
             Sort ??= new SortConfig();
             SweepLeave ??= new SweepLeaveConfig();
@@ -28,11 +32,24 @@ public sealed class VintageTweaksSystem : ModSystem
         }
     }
 
+    public sealed class ClearHandsConfig
+    {
+        public bool AllowClearHands = true;
+        public int BackpackSlots = 4;
+        public GlKeys ClearHandsKey = GlKeys.F;
+    }
+
     public sealed class CrateConfig
     {
         public bool AllowCratePush = true;
         public bool AllowCratePull = true;
         public int CrateDelayMs = 300;
+        public int BackpackSlots = 4;
+    }
+
+    public sealed class MiddleClickClearConfig
+    {
+        public bool AllowMiddleClickClear = true;
         public int BackpackSlots = 4;
     }
 
@@ -78,6 +95,8 @@ public sealed class VintageTweaksSystem : ModSystem
 
     private const string ConfigFileName = "VintageTweaksConfig.json";
 
+    private client.ClearHands _clearHandsClient = null!;
+    private client.MiddleClickClear? _middleClickClearClient = null!;
     private client.MiddleClickSort? _middleClickSortClient = null!;
     private client.QuickMoveItem? _quickMoveItemClient = null!;
     private client.QuickStackCrate? _quickStackCrateClient = null!;
@@ -95,6 +114,8 @@ public sealed class VintageTweaksSystem : ModSystem
 
     public override void StartClientSide(ICoreClientAPI capi)
     {
+        _clearHandsClient = new client.ClearHands(capi, Config.ClearHands);
+        _middleClickClearClient = new client.MiddleClickClear(capi, Config.MiddleClickClear);
         _middleClickSortClient = new client.MiddleClickSort(capi, Config.Sort);
         _quickMoveItemClient = new client.QuickMoveItem(capi, Config.QuickMove);
         _quickStackCrateClient = new client.QuickStackCrate(capi, Config.Crate);
@@ -105,6 +126,8 @@ public sealed class VintageTweaksSystem : ModSystem
 
     public override void StartServerSide(ICoreServerAPI sapi)
     {
+        _ = new server.ClearHands(sapi, Config.ClearHands);
+        _ = new server.MiddleClickClear(sapi, Config.MiddleClickClear);
         _ = new server.MiddleClickSort(sapi, Config.Sort);
         _ = new server.QuickMoveItem(sapi, Config.QuickMove);
         _ = new server.QuickStackCrate(sapi, Config.Crate);
@@ -115,6 +138,8 @@ public sealed class VintageTweaksSystem : ModSystem
 
     public override void Dispose()
     {
+        _clearHandsClient?.Dispose();
+        _middleClickClearClient?.Dispose();
         _middleClickSortClient?.Dispose();
         _quickMoveItemClient?.Dispose();
         _quickStackCrateClient?.Dispose();

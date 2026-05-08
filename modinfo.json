@@ -4,8 +4,8 @@
     "name": "VintageTweaks",
     "authors": ["spiker51"],
     "description": "VintageTweaks! A collection of small quality of life tweaks I would like to see in Vintage Story.",
-    "version": "3.0.0",
+    "version": "3.4.0",
     "dependencies": {
-        "game": "1.21.0"
+        "game": "1.22.0"
     }
 }
